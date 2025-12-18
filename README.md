@@ -67,26 +67,84 @@ Limited support for:
 emaildesignsync/
 ├── code.ts              # Main plugin code (runs in Figma sandbox)
 ├── manifest.json        # Plugin manifest
-├── ui.html             # UI entry point
+├── ui.html             # Plugin UI entry point
+├── server/
+│   └── server.js       # Express web server for web interface
 ├── src/
-│   ├── ui/             # React UI components
+│   ├── ui/             # React UI components (used by plugin)
 │   │   ├── components/ # UI components
-│   │   ├── App.tsx     # Main app component
+│   │   ├── App.tsx     # Plugin app component
 │   │   └── styles.css  # Styles
+│   ├── web/            # Web interface components
+│   │   ├── index.tsx   # Web app entry point
+│   │   ├── index.html  # Web interface HTML
+│   │   └── WebApp.tsx  # Web app component (uses REST API)
 │   └── utils/          # Utility functions
 │       ├── htmlGenerator.ts    # HTML generation logic
 │       ├── warningDetector.ts  # Warning detection
 │       └── zipCreator.ts       # ZIP file creation
+├── webpack.config.js   # Webpack config for plugin build
+├── webpack.web.config.js # Webpack config for web interface
 └── dist/               # Built files (generated)
 ```
 
+## Web Interface
+
+The project now includes a standalone web interface that can interact with Figma through the REST API without needing to run the plugin inside Figma.
+
+### Running the Web Interface
+
+1. **Install dependencies** (if you haven't already):
+   ```bash
+   npm install
+   ```
+
+2. **Build and start the web server**:
+   ```bash
+   npm run start
+   ```
+   
+   Or for development (rebuilds automatically):
+   ```bash
+   npm run dev:web
+   ```
+
+3. **Open your browser**:
+   Navigate to `http://localhost:3000`
+
+4. **Connect to Figma**:
+   - Get your Figma Personal Access Token from [Figma Settings](https://www.figma.com/developers/api#access-tokens)
+   - Enter your access token in the web interface
+   - Enter your Figma file key (extract from the Figma file URL: `figma.com/file/[FILE_KEY]/...`)
+   - Click "Load File" to fetch nodes from your Figma file
+
+5. **Export Email HTML**:
+   - Select a frame or component from the loaded nodes
+   - Configure settings (target clients, max width, etc.)
+   - Click "Export to HTML" to generate the email code
+
+### Web Interface Features
+
+- 🌐 **Standalone Web App** - No need to install the plugin in Figma
+- 🔑 **Figma API Integration** - Connect directly to Figma files via REST API
+- 📁 **File Browser** - Load and browse nodes from any Figma file
+- ✨ **Same Features** - All the same email export capabilities as the plugin
+
 ## Building for Production
 
+### Plugin Build
 ```bash
 npm run build
 ```
 
-This creates optimized files in the `dist/` directory.
+This creates optimized files in the `dist/` directory for the Figma plugin.
+
+### Web Interface Build
+```bash
+npm run build:web
+```
+
+This builds the web interface assets.
 
 ## Technologies
 

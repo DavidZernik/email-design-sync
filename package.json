@@ -5,29 +5,40 @@
   "main": "code.js",
   "scripts": {
     "build": "webpack --mode=production",
+    "build:web": "webpack --config webpack.web.config.js --mode=production",
     "watch": "webpack --mode=development --watch",
-    "dev": "webpack --mode=development"
+    "dev": "webpack --mode=development",
+    "server": "node server/server.js",
+    "dev:web": "npm run build:web && npm run server",
+    "start": "npm run build:web && npm run server"
   },
   "keywords": ["figma", "plugin", "email", "html"],
   "author": "",
   "license": "MIT",
-  "devDependencies": {
-    "@figma/plugin-typings": "^1.84.0",
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
-    "css-loader": "^6.8.1",
-    "style-loader": "^3.3.3",
-    "ts-loader": "^9.5.0",
-    "typescript": "^5.2.2",
-    "webpack": "^5.88.2",
-    "webpack-cli": "^5.1.4"
-  },
   "dependencies": {
     "jszip": "^3.10.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-syntax-highlighter": "^15.5.0",
-    "@types/react-syntax-highlighter": "^15.5.11"
+    "@types/react-syntax-highlighter": "^15.5.11",
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.84.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@types/express": "^4.17.21",
+    "@types/cors": "^2.8.17",
+    "@types/node": "^20.10.0",
+    "css-loader": "^6.8.1",
+    "style-loader": "^3.3.3",
+    "ts-loader": "^9.5.0",
+    "typescript": "^5.2.2",
+    "webpack": "^5.88.2",
+    "webpack-cli": "^5.1.4",
+    "html-webpack-plugin": "^5.5.3"
   }
 }
 
