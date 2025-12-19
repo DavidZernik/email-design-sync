@@ -121,13 +121,22 @@ function App() {
   return (
     <div className="app">
       <div className="app-header">
-        <h1>Email Design Sync</h1>
-        <button 
-          className="template-button"
-          onClick={() => setShowTemplates(!showTemplates)}
-        >
-          {showTemplates ? 'Hide' : 'Show'} Templates
-        </button>
+        <div className="app-header-top">
+          <h1>Email Design Sync</h1>
+          <button 
+            className="template-button"
+            onClick={() => setShowTemplates(!showTemplates)}
+          >
+            {showTemplates ? 'Hide' : 'Show'} Templates
+          </button>
+        </div>
+        <p className="intro-text">
+          Email Design Sync is a Figma plugin that exports your designs as production-ready HTML email code. 
+          Built with TypeScript and React, it automatically converts Figma auto-layout frames into table-based HTML 
+          that works across major email clients like Gmail, Apple Mail, and Yahoo. Perfect for converting email designs to 
+          HTML templates, exporting client-ready code, and packaging designs with images for easy integration into your email campaigns. 
+          <a href="https://github.com/DavidZernik/email-design-sync" target="_blank" rel="noopener noreferrer" className="repo-link">View on GitHub</a>
+        </p>
       </div>
 
       {showTemplates && (

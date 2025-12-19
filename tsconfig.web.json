@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "types": []
+  },
+  "include": ["src/web/**/*", "src/ui/components/**/*", "src/utils/**/*"],
+  "exclude": ["node_modules", "code.ts", "src/ui/App.tsx", "src/ui/index.tsx"]
+}
+

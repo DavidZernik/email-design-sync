@@ -17,7 +17,7 @@ const SettingsPanel: React.FC<Props> = ({ maxWidth, onMaxWidthChange, minify, on
           type="number"
           className="settings-input"
           value={maxWidth}
-          onChange={(e) => onMaxWidthChange(parseInt(e.target.value) || 600)}
+          onChange={(e) => onMaxWidthChange(parseInt((e.target as HTMLInputElement).value) || 600)}
           min={400}
           max={800}
         />
