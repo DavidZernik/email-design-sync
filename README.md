@@ -154,6 +154,14 @@ This builds the web interface assets.
 - react-syntax-highlighter
 - JSZip
 
+## Next iteration idea (2026-05-26)
+
+Instead of generating HTML directly from Figma frames (fragile across email clients), use an LLM to read the Figma file, decompose it into sections (hero, feature row, CTA, footer, etc.), and match each section to the closest block from a curated library of pre-tested bulletproof email templates. The LLM only outputs block IDs + content slots (headline text, image URL, button label); the blocks themselves handle the rendering, so output always renders correctly across Gmail / Apple Mail / Outlook.
+
+Tradeoff: output matches the closest available block rather than Figma 1:1. The Figma becomes a brief, not the source of truth.
+
+Design requirement: confidence threshold or explicit "no block matches, needs new template" output — otherwise the library silently degrades into "whatever's closest" and emails start feeling off-brand. Seed with ~10-20 well-chosen blocks before the matching layer is useful.
+
 ## License
 
 MIT

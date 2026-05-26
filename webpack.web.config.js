@@ -31,6 +31,10 @@ module.exports = {
         test: /\.css$/,
         use: ['style-loader', 'css-loader'],
       },
+      {
+        test: /sampleEmail\.html$/,
+        type: 'asset/source',
+      },
     ],
   },
   plugins: [

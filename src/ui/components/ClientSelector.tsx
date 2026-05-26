@@ -5,12 +5,17 @@ interface Props {
   onChange: (clients: string[]) => void;
 }
 
-const EMAIL_CLIENTS = [
-  { id: 'gmail', label: 'Gmail' },
-  { id: 'apple-mail', label: 'Apple Mail' },
-  { id: 'yahoo', label: 'Yahoo Mail' },
-  { id: 'outlook-web', label: 'Outlook.com (Web)' },
+export const EMAIL_CLIENTS = [
+  { id: 'gmail', label: 'Gmail (Web)' },
   { id: 'gmail-mobile', label: 'Gmail (Mobile)' },
+  { id: 'apple-mail', label: 'Apple Mail (macOS)' },
+  { id: 'apple-mail-ios', label: 'Apple Mail (iPhone)' },
+  { id: 'outlook-windows', label: 'Outlook (Windows)' },
+  { id: 'outlook-web', label: 'Outlook.com (Web)' },
+  { id: 'outlook-mobile', label: 'Outlook (Mobile)' },
+  { id: 'yahoo', label: 'Yahoo Mail' },
+  { id: 'protonmail', label: 'ProtonMail' },
+  { id: 'aol', label: 'AOL Mail' },
 ];
 
 const ClientSelector: React.FC<Props> = ({ selectedClients, onChange }) => {
@@ -24,7 +29,10 @@ const ClientSelector: React.FC<Props> = ({ selectedClients, onChange }) => {
 
   return (
     <div className="panel">
-      <div className="panel-title">Target Email Clients</div>
+      <div className="panel-title">Priority Email Clients</div>
+      <p style={{ fontSize: '13px', color: 'rgba(0, 0, 0, 0.7)', marginBottom: '14px', lineHeight: 1.5 }}>
+        The output always renders on every major client. Pick the ones that matter most to you and we'll do an extra render-check pass on those.
+      </p>
       <div className="checklist">
         {EMAIL_CLIENTS.map(client => (
           <div key={client.id} className="checkbox-item">

@@ -9,11 +9,11 @@ interface Props {
 const ExportButton: React.FC<Props> = ({ onClick, disabled, isLoading }) => {
   return (
     <button
-      className={`export-button ${isLoading ? 'loading' : ''}`}
+      className={`export-button export-button-compact ${isLoading ? 'loading' : ''}`}
       onClick={onClick}
       disabled={disabled}
     >
-      {isLoading ? 'Exporting...' : 'Export to HTML'}
+      {isLoading ? 'Converting...' : 'Convert Figma Design to HTML'}
     </button>
   );
 };

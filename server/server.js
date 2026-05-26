@@ -12,6 +12,7 @@ app.use(express.json());
 
 // Serve static files from dist directory
 app.use(express.static(path.join(__dirname, '../dist')));
+app.use(express.static(path.join(__dirname, '../public')));
 
 // API Routes
 app.get('/api/health', (req, res) => {

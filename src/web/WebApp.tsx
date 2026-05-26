@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import SelectionPanel from '../ui/components/SelectionPanel';
-import ClientSelector from '../ui/components/ClientSelector';
+import ClientSelector, { EMAIL_CLIENTS } from '../ui/components/ClientSelector';
 import SettingsPanel from '../ui/components/SettingsPanel';
 import ExportButton from '../ui/components/ExportButton';
 import CodePreview from '../ui/components/CodePreview';
 import WarningsPanel from '../ui/components/WarningsPanel';
-import TemplateLibrary from '../ui/components/TemplateLibrary';
 import Toast from '../ui/components/Toast';
 import { generateEmailHTML } from '../utils/htmlGenerator';
 import { detectWarnings } from '../utils/warningDetector';
 import { createZipFile } from '../utils/zipCreator';
+import { DEMO_DOCUMENT, DEMO_ROOT_ID } from './demoFixture';
+import sampleEmailHtml from './sampleEmail.html';
 
 interface SelectedNode {
   id: string;
@@ -42,9 +43,13 @@ function WebApp() {
   const [warnings, setWarnings] = useState<Warning[]>([]);
   const [nodeData, setNodeData] = useState<any>(null);
   const [images, setImages] = useState<Array<{hash: string, name: string, bytes: Uint8Array}>>([]);
-  const [showTemplates, setShowTemplates] = useState<boolean>(false);
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
   const [tokenValid, setTokenValid] = useState<boolean | null>(null);
+  const [isDemo, setIsDemo] = useState<boolean>(false);
+  const [renderStage, setRenderStage] = useState<number>(-1);
+  const [tokenError, setTokenError] = useState<string | null>(null);
+  const [fileKeyError, setFileKeyError] = useState<string | null>(null);
+  const [showAccessModal, setShowAccessModal] = useState<boolean>(false);
 
   // Load access token from localStorage
   useEffect(() => {
@@ -90,6 +95,54 @@ function WebApp() {
 
     return () => clearTimeout(timer);
   }, [accessToken]);
+
+  const handleConnectFigma = () => {
+    let hasError = false;
+    const tokenTrimmed = accessToken.trim();
+    const fileKeyTrimmed = fileKey.trim();
+
+    if (!tokenTrimmed) {
+      setTokenError('Required.');
+      hasError = true;
+    } else if (tokenTrimmed.length < 30) {
+      setTokenError('Figma tokens are typically 40+ characters. Check that you pasted the full token.');
+      hasError = true;
+    } else if (!/^[A-Za-z0-9_-]+$/.test(tokenTrimmed)) {
+      setTokenError('Tokens contain only letters, numbers, hyphens, and underscores. Check for stray spaces or quotes.');
+      hasError = true;
+    } else {
+      setTokenError(null);
+    }
+
+    if (!fileKeyTrimmed) {
+      setFileKeyError('Required.');
+      hasError = true;
+    } else if (!/^[A-Za-z0-9]{15,40}$/.test(fileKeyTrimmed)) {
+      setFileKeyError('File keys are 15-40 alphanumeric characters. Copy just the key from your Figma file URL: figma.com/file/[KEY]/...');
+      hasError = true;
+    } else {
+      setFileKeyError(null);
+    }
+
+    if (!hasError) {
+      setShowAccessModal(true);
+    }
+  };
+
+  const handleLoadDemo = () => {
+    setIsDemo(true);
+    setDocumentNodeId(DEMO_ROOT_ID);
+    setSelectedNodeId(DEMO_ROOT_ID);
+    setSelectedNodes([{
+      id: DEMO_ROOT_ID,
+      name: 'AT&T iPhone Promo',
+      type: 'FRAME',
+      isAutoLayout: true,
+      width: 700,
+      height: 1400,
+    }]);
+    setFileLoaded(true);
+  };
 
   const handleLoadFile = async () => {
     console.log('[handleLoadFile] Starting file load...');
@@ -221,7 +274,31 @@ function WebApp() {
     
     // Use document node ID if available, otherwise fall back to selected node
     const nodeIdToExport = documentNodeId || selectedNodeId;
-    
+
+    if (isDemo) {
+      setIsExporting(true);
+      setGeneratedHTML('');
+      setWarnings([]);
+      setImages([]);
+      setRenderStage(0);
+      const stageCount = 5;
+      const stageMs = 2000;
+      for (let i = 1; i <= stageCount; i++) {
+        setTimeout(() => setRenderStage(i), stageMs * i);
+      }
+      setTimeout(() => {
+        setGeneratedHTML(sampleEmailHtml);
+        setIsExporting(false);
+        setRenderStage(-1);
+        setToast({ message: 'Rendered. Scroll down to see the HTML.', type: 'success' });
+        setTimeout(() => {
+          const codePreview = document.querySelector('.code-preview');
+          if (codePreview) codePreview.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+      }, stageMs * stageCount);
+      return;
+    }
+
     if (!nodeIdToExport || !fileKey || !accessToken) {
       console.warn('[handleExport] Missing required data');
       setToast({ message: 'Please load a file first', type: 'error' });
@@ -450,107 +527,135 @@ function WebApp() {
     <div className="app">
       <div className="app-header">
         <div className="app-header-top">
-          <h1>Email Design Sync - Web Interface</h1>
-          <button 
-            className="template-button"
-            onClick={() => setShowTemplates(!showTemplates)}
-          >
-            {showTemplates ? 'Hide' : 'Show'} Templates
-          </button>
+          <h1>Instant Figma Design to HTML Email</h1>
         </div>
         <p className="intro-text">
-          Email Design Sync is a web application that exports your Figma designs as production-ready HTML email code. 
-          Built with TypeScript, React, and the Figma REST API, it automatically converts Figma auto-layout frames into table-based HTML 
-          that works across major email clients like Gmail, Apple Mail, and Yahoo. Perfect for converting email designs to 
-          HTML templates, exporting client-ready code, and packaging designs with images for easy integration into your email campaigns. 
+          Uses the Figma API to turn a design file into a bullet-proof HTML email that renders correctly in Gmail, Apple Mail, and Outlook. Simply point the app to your design file, and the email is done.
           <a href="https://github.com/DavidZernik/email-design-sync" target="_blank" rel="noopener noreferrer" className="repo-link">View on GitHub</a>
         </p>
       </div>
 
-      {/* Figma Connection Panel */}
-      <div className="panel" style={{ 
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '16px'
-      }}>
-        <h2 style={{ fontSize: '13px', fontWeight: 700, marginBottom: '4px', color: '#475569', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Connect to Figma</h2>
-        
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155', letterSpacing: '-0.01em' }}>
-            Figma Access Token
-            <input
-              type="password"
-              value={accessToken}
-              onChange={(e) => setAccessToken((e.target as HTMLInputElement).value)}
-              placeholder="Enter your Figma personal access token"
-              className="settings-input"
+      <div className="panel" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <h2 style={{ fontSize: '13px', fontWeight: 700, color: '#000000', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Get started</h2>
+
+        <div style={{
+          background: '#2d601d',
+          color: '#FFFFFF',
+          borderRadius: '10px',
+          padding: '20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px'
+        }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(255, 255, 255, 0.7)' }}>
+            Option 1, recommended
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+            <button
+              onClick={handleLoadDemo}
               style={{
-                width: '100%',
-                marginTop: '8px'
+                background: '#FFFFFF',
+                color: '#2d601d',
+                border: 'none',
+                padding: '10px 20px',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                letterSpacing: '-0.01em'
               }}
-            />
-          </label>
-          <a 
-            href="https://www.figma.com/developers/api#access-tokens" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            style={{ fontSize: '12px', color: '#6366f1', textDecoration: 'none', fontWeight: 500 }}
-          >
-            How to get a Figma access token
-          </a>
+            >
+              Try the demo
+            </button>
+            <span style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.9)' }}>
+              No Figma account needed. Loads a sample design.
+            </span>
+          </div>
+          {isDemo && (
+            <div style={{ fontSize: '12px', color: '#FFFFFF', fontWeight: 600 }}>
+              Demo mode active. Scroll down to export.
+            </div>
+          )}
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155', letterSpacing: '-0.01em' }}>
+        {!isDemo && (
+        <div style={{
+          background: 'rgba(0, 0, 0, 0.04)',
+          border: '1px solid rgba(0, 0, 0, 0.08)',
+          borderRadius: '10px',
+          padding: '20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px'
+        }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(0, 0, 0, 0.55)' }}>
+            Option 2, connect your own Figma account
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label style={{ fontSize: '13px', fontWeight: 600, color: '#000000', letterSpacing: '-0.01em' }}>
+              Figma Access Token
+              <input
+                type="password"
+                value={accessToken}
+                onChange={(e) => { setAccessToken((e.target as HTMLInputElement).value); setTokenError(null); }}
+                placeholder="Enter your Figma personal access token"
+                className="settings-input"
+                style={{ width: '100%', marginTop: '8px', borderColor: tokenError ? '#000000' : undefined }}
+              />
+            </label>
+            {tokenError ? (
+              <span style={{ fontSize: '12px', color: '#000000', fontWeight: 600 }}>{tokenError}</span>
+            ) : (
+              <a
+                href="https://www.figma.com/developers/api#access-tokens"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ fontSize: '12px', color: '#2d601d', textDecoration: 'none', fontWeight: 500 }}
+              >
+                How to get a Figma access token
+              </a>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '13px', fontWeight: 600, color: '#000000', letterSpacing: '-0.01em' }}>
               Figma File Key
               <input
                 type="text"
                 value={fileKey}
-                onChange={(e) => setFileKey((e.target as HTMLInputElement).value)}
+                onChange={(e) => { setFileKey((e.target as HTMLInputElement).value); setFileKeyError(null); }}
                 placeholder="e.g., abc123xyz"
                 className="settings-input"
-                style={{
-                  width: '100%',
-                  marginTop: '8px'
-                }}
+                style={{ width: '100%', marginTop: '8px', borderColor: fileKeyError ? '#000000' : undefined }}
               />
             </label>
-            <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>
-              Extract from Figma file URL: figma.com/file/[FILE_KEY]/...
-            </span>
+            {fileKeyError ? (
+              <span style={{ fontSize: '12px', color: '#000000', fontWeight: 600 }}>{fileKeyError}</span>
+            ) : (
+              <span style={{ fontSize: '12px', color: 'rgba(0, 0, 0, 0.6)', fontWeight: 500 }}>
+                Extract from Figma file URL: figma.com/file/[FILE_KEY]/...
+              </span>
+            )}
           </div>
+
           <button
-            onClick={handleLoadFile}
-            disabled={!fileKey || !accessToken || isLoading}
-            className="export-button"
-            style={{
-              padding: '12px 24px',
-              whiteSpace: 'nowrap',
-              width: 'auto'
-            }}
+            onClick={handleConnectFigma}
+            className="export-button export-button-compact"
+            style={{ marginTop: '4px' }}
           >
-            {isLoading ? 'Loading...' : 'Load File'}
+            Connect to Figma
           </button>
         </div>
+        )}
       </div>
-
-      {showTemplates && (
-        <TemplateLibrary onSelectTemplate={setSelectedNodeId} />
-      )}
 
       {fileLoaded && (
         <>
           <ClientSelector
             selectedClients={selectedClients}
             onChange={setSelectedClients}
-          />
-
-          <SettingsPanel
-            maxWidth={maxWidth}
-            onMaxWidthChange={setMaxWidth}
-            minify={minify}
-            onMinifyChange={setMinify}
           />
 
           {warnings.length > 0 && (
@@ -563,21 +668,38 @@ function WebApp() {
             isLoading={isExporting}
           />
 
+          {isDemo && (
+            <div className="panel" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <h2 style={{ fontSize: '13px', fontWeight: 700, color: '#000000', letterSpacing: '0.05em', textTransform: 'uppercase', margin: 0 }}>Sample Figma design</h2>
+                <span style={{ fontSize: '12px', color: 'rgba(0, 0, 0, 0.6)', fontWeight: 500 }}>AT&amp;T iPhone Promo (700px wide)</span>
+              </div>
+              <div style={{ borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(0, 0, 0, 0.15)', background: '#FFFFFF' }}>
+                <iframe
+                  srcDoc={sampleEmailHtml}
+                  title="Sample design preview"
+                  style={{ width: '100%', height: '720px', border: 'none', display: 'block', background: '#ffffff' }}
+                  sandbox=""
+                />
+              </div>
+            </div>
+          )}
+
           {generatedHTML && (
             <>
-              <div style={{ 
-                padding: '16px', 
-                background: 'linear-gradient(135deg, #eef2ff 0%, #ede9fe 100%)', 
-                borderRadius: '12px', 
-                border: '2px solid #6366f1',
+              <div style={{
+                padding: '16px',
+                background: 'rgba(45, 96, 29, 0.06)',
+                borderRadius: '8px',
+                border: '1px solid #2d601d',
                 marginTop: '8px',
                 marginBottom: '16px'
               }}>
-                <div style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
-                  ✅ HTML Generated Successfully!
+                <div style={{ fontSize: '14px', fontWeight: 600, color: '#000000', marginBottom: '4px' }}>
+                  HTML generated
                 </div>
-                <div style={{ fontSize: '12px', color: '#475569' }}>
-                  Use the buttons below to copy or download your email HTML code
+                <div style={{ fontSize: '12px', color: 'rgba(0, 0, 0, 0.7)' }}>
+                  Use the buttons below to copy or download the code.
                 </div>
               </div>
               <CodePreview
@@ -590,6 +712,95 @@ function WebApp() {
         </>
       )}
 
+      {showAccessModal && (
+        <div className="render-overlay" onClick={() => setShowAccessModal(false)}>
+          <div className="render-panel" style={{ maxWidth: '480px', cursor: 'default' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div className="render-title">Request access</div>
+              <div style={{ fontSize: '14px', lineHeight: 1.6, color: 'rgba(255, 255, 255, 0.85)' }}>
+                Connecting your own Figma account is currently invite-only while we test on real designs. Reach out and David will get you set up.
+              </div>
+              <a
+                href="mailto:david@blueinboxllc.com?subject=Figma%20Design%20Sync%20access"
+                style={{
+                  background: '#2d601d',
+                  color: '#FFFFFF',
+                  padding: '12px 20px',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  textDecoration: 'none',
+                  textAlign: 'center',
+                  letterSpacing: '-0.01em'
+                }}
+              >
+                Email david@blueinboxllc.com
+              </a>
+              <button
+                onClick={() => setShowAccessModal(false)}
+                style={{
+                  background: 'transparent',
+                  color: 'rgba(255, 255, 255, 0.6)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  padding: '10px 20px',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  cursor: 'pointer'
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isExporting && isDemo && renderStage >= 0 && (
+        <div className="render-overlay">
+          <div className="render-panel">
+            <div className="render-panel-header">
+              <div className="render-spinner" />
+              <div>
+                <div className="render-title">Rendering email</div>
+                <div className="render-subtitle">Converting Figma layers into bullet-proof HTML</div>
+              </div>
+            </div>
+            <ul className="render-stages">
+              {(() => {
+                const labels = EMAIL_CLIENTS
+                  .filter(c => selectedClients.includes(c.id))
+                  .map(c => c.label);
+                const optimizeLabel = labels.length === 0
+                  ? 'Optimizing for all major clients'
+                  : `Optimizing for ${labels.join(', ')}`;
+                return [
+                  'Parsing Figma layer tree',
+                  'Extracting components and styles',
+                  'Mapping to bullet-proof email blocks',
+                  optimizeLabel,
+                  'Finalizing HTML',
+                ];
+              })().map((label, i) => {
+                const state = renderStage > i ? 'done' : renderStage === i ? 'active' : 'pending';
+                return (
+                  <li key={i} className={`render-stage render-stage-${state}`}>
+                    <span className="render-stage-mark">
+                      {state === 'done' ? '✓' : state === 'active' ? '' : '○'}
+                    </span>
+                    <span className="render-stage-num">[{String(i + 1).padStart(2, '0')}/05]</span>
+                    <span className="render-stage-label">{label}</span>
+                  </li>
+                );
+              })}
+            </ul>
+            <div className="render-progress">
+              <div className="render-progress-fill" style={{ width: `${(renderStage / 5) * 100}%` }} />
+            </div>
+          </div>
+        </div>
+      )}
+
       {toast && (
         <Toast
           message={toast.message}
@@ -597,6 +808,26 @@ function WebApp() {
           onClose={() => setToast(null)}
         />
       )}
+
+      <footer style={{
+        marginTop: '40px',
+        paddingTop: '20px',
+        borderTop: '1px solid rgba(0, 0, 0, 0.1)',
+        textAlign: 'center',
+        fontSize: '13px',
+        color: 'rgba(0, 0, 0, 0.6)',
+        fontWeight: 500
+      }}>
+        Created by{' '}
+        <a
+          href="https://www.davidz-losangeles.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: '#2d601d', textDecoration: 'none', fontWeight: 600 }}
+        >
+          David Z.
+        </a>
+      </footer>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 
@@ -10,15 +10,6 @@ interface Props {
 
 const CodePreview: React.FC<Props> = ({ html, onCopy, onDownload }) => {
   const [activeTab, setActiveTab] = useState<'code' | 'preview'>('preview');
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-
-  useEffect(() => {
-    if (iframeRef.current && iframeRef.current.contentDocument) {
-      iframeRef.current.contentDocument.open();
-      iframeRef.current.contentDocument.write(html);
-      iframeRef.current.contentDocument.close();
-    }
-  }, [html]);
 
   return (
     <div className="code-preview">
@@ -43,35 +34,31 @@ const CodePreview: React.FC<Props> = ({ html, onCopy, onDownload }) => {
             Copy
           </button>
           <button className="code-button secondary" onClick={onDownload}>
-            Download ZIP
+            Download Final HTML
           </button>
         </div>
       </div>
-      {activeTab === 'code' ? (
-        <div className="code-container">
-          <SyntaxHighlighter
-            language="html"
-            style={vscDarkPlus}
-            customStyle={{
-              margin: 0,
-              padding: 0,
-              background: 'transparent',
-              fontSize: '10px',
-            }}
-          >
-            {html}
-          </SyntaxHighlighter>
-        </div>
-      ) : (
-        <div className="preview-container">
-          <iframe
-            ref={iframeRef}
-            title="Email Preview"
-            className="preview-iframe"
-            sandbox="allow-same-origin"
-          />
-        </div>
-      )}
+      <div className="preview-container" style={{ display: activeTab === 'preview' ? 'block' : 'none' }}>
+        <iframe
+          srcDoc={html}
+          title="Email Preview"
+          className="preview-iframe"
+        />
+      </div>
+      <div className="code-container" style={{ display: activeTab === 'code' ? 'block' : 'none' }}>
+        <SyntaxHighlighter
+          language="html"
+          style={vscDarkPlus}
+          customStyle={{
+            margin: 0,
+            padding: 0,
+            background: 'transparent',
+            fontSize: '10px',
+          }}
+        >
+          {html}
+        </SyntaxHighlighter>
+      </div>
     </div>
   );
 };
