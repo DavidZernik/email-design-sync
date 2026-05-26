@@ -1,168 +1,97 @@
-# Email Design Sync - Figma Plugin
+# Email Design Sync
 
-A Figma plugin that exports your designs as production-ready HTML email code. Transform your auto-layout frames into table-based HTML emails that work across modern email clients.
+Turn a Figma email design into bullet-proof HTML that renders correctly in Gmail, Apple Mail, Outlook, and the other major clients.
 
-## Features
+**Live demo:** https://email-design-sync.onrender.com/
 
-- 🎨 **Clean UI** - Modern React-based interface within Figma
-- 📧 **Email Client Support** - Target Gmail, Apple Mail, Yahoo, and more
-- 🏗️ **Auto-Layout Conversion** - Automatically converts Figma auto-layout frames to table-based HTML
-- 🖼️ **Image Extraction** - Extracts images and packages them in a ZIP file
-- ⚠️ **Warning System** - Detects email design anti-patterns before export
-- 📋 **Code Preview** - Syntax-highlighted HTML preview with copy/download options
-- 🎯 **Template Library** - Pre-built email templates to get started quickly
-- ⚙️ **Customizable Settings** - Control max width, minification, and more
+> **Current state:** Connecting your own Figma account is intentionally gated behind a "request access" modal while the real Figma → HTML pipeline is being hardened on real designs. The demo path (Try the demo → preview → Convert) is fully working and shows the intended UX end to end.
 
-## Installation
+## What you see when you visit
 
-1. Clone this repository
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Build the plugin:
-   ```bash
-   npm run build
-   ```
-4. In Figma Desktop:
-   - Go to `Plugins` → `Development` → `Import plugin from manifest...`
-   - Select the `manifest.json` file from this directory
+1. **Try the demo** loads a pre-baked AT&T iPhone SE newsletter as the "input" Figma design and renders it in an iframe.
+2. **Convert Figma Design to HTML** plays a 10-second futuristic rendering overlay (five stages, dynamic labels for the priority email clients you ticked), then drops the final HTML into a Preview + Code tab below. Copy it or download the standalone `.html`.
+3. **Option 2 (Connect your own Figma)** validates the format of the access token and file key. If both pass, a modal opens directing the visitor to `david@blueinboxllc.com` for access. No real Figma API call happens here yet.
 
-## Development
-
-To develop with hot reloading:
-
-```bash
-npm run watch
-```
-
-Then in Figma, load the plugin and it will automatically reload when you make changes.
-
-## Usage
-
-1. **Select a Frame or Component** - Select an auto-layout frame or component in your Figma file
-2. **Choose Target Clients** - Select which email clients you want to optimize for
-3. **Configure Settings** - Set max width (default 600px) and other options
-4. **Export** - Click "Export to HTML" to generate the email code
-5. **Review Warnings** - Check any compatibility warnings before using the code
-6. **Copy or Download** - Copy the HTML to clipboard or download as ZIP with images
-
-## Email Design Guidelines
-
-This plugin works best with:
-- ✅ Auto-layout frames (horizontal or vertical)
-- ✅ Solid color backgrounds
-- ✅ Standard web fonts (Arial, Helvetica, Georgia, etc.)
-- ✅ Simple layouts without absolute positioning
-
-Limited support for:
-- ⚠️ Image backgrounds (may not work in all clients)
-- ⚠️ Gradient fills
-- ⚠️ Custom fonts (will fallback to safe fonts)
-- ⚠️ Complex overlays or absolute positioning
-
-## Project Structure
+## Architecture
 
 ```
-emaildesignsync/
-├── code.ts              # Main plugin code (runs in Figma sandbox)
-├── manifest.json        # Plugin manifest
-├── ui.html             # Plugin UI entry point
+┌──────────────────────────────────────────────────────────┐
+│  Browser (React web app, src/web/)                       │
+│  - WebApp.tsx: main component, demo + access-gate logic  │
+│  - sampleEmail.html: hardcoded AT&T iPhone SE design     │
+│  - render overlay, code/preview tabs                     │
+└──────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌──────────────────────────────────────────────────────────┐
+│  Express server (server/server.js)                       │
+│  - serves /dist (compiled React app)                     │
+│  - serves /public (sample email images)                  │
+│  - proxies Figma REST API for the real-Figma flow        │
+│    (currently unreachable from the UI by design)         │
+└──────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌──────────────────────────────────────────────────────────┐
+│  Render (https://email-design-sync.onrender.com)         │
+│  - free tier, auto-deploys on push to main               │
+│  - deploy hook configured                                │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Sample email images** are referenced as absolute GitHub raw URLs (`raw.githubusercontent.com/DavidZernik/email-design-sync/main/public/images/...`) so the downloaded HTML renders correctly anywhere it lands (Gmail composer, ESP, local file).
+
+**There is also a Figma plugin** (`code.ts`, `manifest.json`, `webpack.config.js`) that compiles to a Figma desktop plugin. It is not how the live demo is reached, and is not the focus of the current iteration. The plugin's actual HTML-conversion logic lives in `src/utils/` (`htmlGenerator.ts`, `warningDetector.ts`, `zipCreator.ts`) and is shared with the web app for when the real-Figma path is unblocked.
+
+## Project structure
+
+```
+email-design-sync/
 ├── server/
-│   └── server.js       # Express web server for web interface
+│   └── server.js                # Express server
+├── public/
+│   └── images/                  # Sample email assets (served at /images)
 ├── src/
-│   ├── ui/             # React UI components (used by plugin)
-│   │   ├── components/ # UI components
-│   │   ├── App.tsx     # Plugin app component
-│   │   └── styles.css  # Styles
-│   ├── web/            # Web interface components
-│   │   ├── index.tsx   # Web app entry point
-│   │   ├── index.html  # Web interface HTML
-│   │   └── WebApp.tsx  # Web app component (uses REST API)
-│   └── utils/          # Utility functions
-│       ├── htmlGenerator.ts    # HTML generation logic
-│       ├── warningDetector.ts  # Warning detection
-│       └── zipCreator.ts       # ZIP file creation
-├── webpack.config.js   # Webpack config for plugin build
-├── webpack.web.config.js # Webpack config for web interface
-└── dist/               # Built files (generated)
+│   ├── web/                     # Web app (the live site)
+│   │   ├── WebApp.tsx           # Main component
+│   │   ├── sampleEmail.html     # Demo email content
+│   │   ├── demoFixture.ts       # Demo metadata
+│   │   ├── index.tsx, index.html
+│   │   └── html.d.ts
+│   ├── ui/                      # Shared React components
+│   │   ├── components/          # ClientSelector, CodePreview, ExportButton, etc.
+│   │   └── styles.css           # App palette: black / white / #2d601d
+│   └── utils/                   # HTML generation logic (used by plugin path)
+├── code.ts                      # Figma plugin entry (sandbox)
+├── manifest.json                # Figma plugin manifest
+├── ui.html                      # Figma plugin UI shell
+├── webpack.config.js            # Builds the plugin
+├── webpack.web.config.js        # Builds the web app
+└── dist/                        # Build output (gitignored)
 ```
 
-## Web Interface
+## Running locally
 
-The project now includes a standalone web interface that can interact with Figma through the REST API without needing to run the plugin inside Figma.
-
-### Running the Web Interface
-
-1. **Install dependencies** (if you haven't already):
-   ```bash
-   npm install
-   ```
-
-2. **Build and start the web server**:
-   ```bash
-   npm run start
-   ```
-   
-   Or for development (rebuilds automatically):
-   ```bash
-   npm run dev:web
-   ```
-
-3. **Open your browser**:
-   Navigate to `http://localhost:3000`
-
-4. **Connect to Figma**:
-   - Get your Figma Personal Access Token from [Figma Settings](https://www.figma.com/developers/api#access-tokens)
-   - Enter your access token in the web interface
-   - Enter your Figma file key (extract from the Figma file URL: `figma.com/file/[FILE_KEY]/...`)
-   - Click "Load File" to fetch nodes from your Figma file
-
-5. **Export Email HTML**:
-   - Select a frame or component from the loaded nodes
-   - Configure settings (target clients, max width, etc.)
-   - Click "Export to HTML" to generate the email code
-
-### Web Interface Features
-
-- 🌐 **Standalone Web App** - No need to install the plugin in Figma
-- 🔑 **Figma API Integration** - Connect directly to Figma files via REST API
-- 📁 **File Browser** - Load and browse nodes from any Figma file
-- ✨ **Same Features** - All the same email export capabilities as the plugin
-
-## Building for Production
-
-### Plugin Build
 ```bash
-npm run build
+npm install
+npm run build:web          # compile React app into dist/
+node server/server.js      # serves on http://localhost:3000
 ```
 
-This creates optimized files in the `dist/` directory for the Figma plugin.
+Open `http://localhost:3000` and click **Try the demo**. The Figma plugin build (`npm run build`) is unrelated to the web app.
 
-### Web Interface Build
-```bash
-npm run build:web
-```
+## Deploy
 
-This builds the web interface assets.
-
-## Technologies
-
-- TypeScript
-- React
-- Webpack
-- react-syntax-highlighter
-- JSZip
+`main` auto-deploys to Render. Build command: `npm install && npm run build:web`. Start command: `node server/server.js`. Health check: `/api/health`. No environment variables required.
 
 ## Next iteration idea (2026-05-26)
 
-Instead of generating HTML directly from Figma frames (fragile across email clients), use an LLM to read the Figma file, decompose it into sections (hero, feature row, CTA, footer, etc.), and match each section to the closest block from a curated library of pre-tested bulletproof email templates. The LLM only outputs block IDs + content slots (headline text, image URL, button label); the blocks themselves handle the rendering, so output always renders correctly across Gmail / Apple Mail / Outlook.
+Instead of generating HTML directly from Figma frames (fragile across email clients), use an LLM to read the Figma file, decompose it into sections (hero, feature row, CTA, footer, etc.), and match each section to the closest block from a curated library of pre-tested bullet-proof email templates. The LLM only outputs block IDs + content slots (headline text, image URL, button label); the blocks themselves handle the rendering, so output always renders correctly across Gmail, Apple Mail, Outlook.
 
 Tradeoff: output matches the closest available block rather than Figma 1:1. The Figma becomes a brief, not the source of truth.
 
-Design requirement: confidence threshold or explicit "no block matches, needs new template" output — otherwise the library silently degrades into "whatever's closest" and emails start feeling off-brand. Seed with ~10-20 well-chosen blocks before the matching layer is useful.
+Design requirement: confidence threshold or explicit "no block matches, needs new template" output, otherwise the library silently degrades into "whatever's closest" and emails start feeling off-brand. Seed with ~10-20 well-chosen blocks before the matching layer is useful.
 
 ## License
 
 MIT
-
